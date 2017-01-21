@@ -1,3 +1,4 @@
 #!/bin/sh
 
+cd /tmp/src                  #place where OpenShift puts your source-code (git checkout)
 ansible-container build
