@@ -6,9 +6,9 @@ LABEL      io.k8s.description="Build Docker Images using Ansible Playbook" \
            io.openshift.tags="builder,ansible"
 
 WORKDIR     /tmp/
-ENTRYPOINT  /usr/local/s2i/run
+ENTRYPOINT  /usr/local/bin/run
 
-COPY        s2i/bin/  /usr/local/s2i/
+COPY        bin/  /usr/local/bin/
 
 RUN         pip install ansible-container
 USER        1001
