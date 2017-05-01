@@ -10,5 +10,5 @@ ENTRYPOINT  /usr/local/bin/run
 
 COPY        bin/  /usr/local/bin/
 
-RUN         pip install ansible-container==0.9.0.0[docker]
+RUN         pip install ansible-container==0.9.0.0
 USER        1001
