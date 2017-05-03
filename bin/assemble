@@ -1,8 +1,20 @@
-#!/bin/bash
+#!/bin/bash -x
 set -o pipefail
 IFS=$'\n\t'
 
-DOCKER_SOCKET=/var/run/docker.sock
+source /usr/libexec/s2i/common.sh
+
+export DOCKER_SOCKET=/var/run/docker.sock
+export HOME=/tmp
+export GIT_COMMITTER_NAME=sterburg
+export GIT_COMMITTER_EMAIL=sterburg@redhat.com
+export ANSIBLE_CONTAINER_PATH=/tmp/src
+#export ANSIBLE_CONTAINER=1
+#export ANSIBLE_ORCHESTRATED_HOSTS=localhost
+export BUILD_DIR=/tmp/src #$(mktemp --directory)
+env
+
+generate_passwd_file
 
 if [ ! -e "${DOCKER_SOCKET}" ]; then
   echo "Docker socket missing at ${DOCKER_SOCKET}"
@@ -23,32 +35,35 @@ if [[ "${SOURCE_REPOSITORY}" != "git://"* ]] && [[ "${SOURCE_REPOSITORY}" != "gi
     echo "Could not access source url: ${SOURCE_REPOSITORY}"
     exit 1
   fi
-fi
 
-if [ -n "${SOURCE_REF}" ]; then
-  BUILD_DIR=$(mktemp --directory)
   git clone --recursive "${SOURCE_REPOSITORY}" "${BUILD_DIR}"
   if [ $? != 0 ]; then
     echo "Error trying to fetch git source: ${SOURCE_REPOSITORY}"
     exit 1
   fi
   pushd "${BUILD_DIR}"
-  git checkout "${SOURCE_REF}"
-  if [ $? != 0 ]; then
-    echo "Error trying to checkout branch: ${SOURCE_REF}"
-    exit 1
+
+  if [ -n "${SOURCE_REF}" ]; then
+    git checkout "${SOURCE_REF}"
+    if [ $? != 0 ]; then
+      echo "Error trying to checkout branch: ${SOURCE_REF}"
+      exit 1
+    fi
   fi
-  popd
-  ansible-container build
-else
-  ansible-container build
+
+fi
+cd $BUILD_DIR/ansible
+
+if [[ -d /var/run/secrets/openshift.io/push ]] && [[ ! -e $HOME/.dockercfg ]]; then
+  cp /var/run/secrets/openshift.io/push/.dockercfg $HOME/.dockercfg
 fi
 
-if [[ -d /var/run/secrets/openshift.io/push ]] && [[ ! -e /root/.dockercfg ]]; then
-  cp /var/run/secrets/openshift.io/push/.dockercfg /root/.dockercfg
-fi
+ansible-container build
+#/usr/local/bin/builder.sh /usr/local/bin/ac_galaxy.py bbaassssiiee.base_naxsi
+#/usr/local/bin/builder.sh /usr/bin/ansible-playbook -vvv -i /etc/ansible/ansible-container-inventory.py -c docker main.yml
 
-if [ -n "${OUTPUT_IMAGE}" ] || [ -s "/root/.dockercfg" ]; then
-  ansible-container shipit #"${TAG}"
-fi
+#if [ -n "${OUTPUT_IMAGE}" ] || [ -s "$HOME/.dockercfg" ]; then
+  ansible-container shipit openshift
+  ansible-container push 
+#fi
 
